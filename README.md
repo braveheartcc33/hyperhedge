@@ -7,15 +7,15 @@
 HyperHedge 是一个基于 **Z-Score 均值回归** 的 Silver/Gold 配对交易策略系统，运行在 Hyperliquid 交易所。
 
 **核心逻辑**：
-- **配对交易**：同时交易 Silver (S) 和 Gold (PAXG) 两种资产，利用它们之间的价格相关性
+- **配对交易**：同时交易 SILVER 和 GOLD 两种资产，利用它们之间的价格相关性
 - **价差分析**：计算 Silver/Gold 价格比率 (Spread)，当价差偏离历史均值时产生交易信号
 - **均值回归**：当 Z-Score 偏离阈值时开仓，回归时平仓，预期价差会回到均值
 
 **交易规则**：
 | 信号 | 条件 | 操作 |
 |------|------|------|
-| SHORT_SILVER | Z-score > 2.0 | 做空 Silver，做多 Gold |
-| LONG_SILVER | Z-score < -2.5 | 做多 Silver，做空 Gold |
+| SHORT_SILVER | Z-score > 2.0 | 做空 SILVER，做多 GOLD |
+| LONG_SILVER | Z-score < -2.5 | 做多 SILVER，做空 GOLD |
 | CLOSE_ALL | Z-score 回归到 ±0.1 | 全部平仓 |
 
 ### 1.2 系统架构图
@@ -162,8 +162,8 @@ Z-score = (spread - rolling_mean) / rolling_std
 
 **信号生成逻辑**：
 ```
-Z-score > 2.0  ─────────────────────────▶ SHORT_SILVER (做空 Silver，做多 Gold)
-Z-score < -2.5 ─────────────────────────▶ LONG_SILVER  (做多 Silver，做空 Gold)
+Z-score > 2.0  ─────────────────────────▶ SHORT_SILVER (做空 SILVER，做多 GOLD)
+Z-score < -2.5 ─────────────────────────▶ LONG_SILVER  (做多 SILVER，做空 GOLD)
 
 持仓期间:
   做空入场: Z-score < 0.1 或回落 50%  ──▶ CLOSE_ALL
@@ -247,7 +247,7 @@ timestamp  |  open  |  high  |  low  |  close  |  volume
 | `set_alert_callback(callback)` | Callable | - | 设置告警回调 |
 
 **风控规则**：
-1. **仓位平衡**：Silver 和 Gold 必须同时持仓，不允许单边
+1. **仓位平衡**：SILVER 和 GOLD 必须同时持仓，不允许单边
 2. **数据时效**：数据必须小于 5 分钟
 3. **价格有效**：价格必须为正数
 4. **网络连接**：连续 3 次错误触发告警
@@ -472,8 +472,8 @@ zscore = (spread - rolling_mean) / rolling_std
 - `prices`: 价格字典
 
 **处理**：
-- SHORT_SILVER: 做空 Silver + 做多 Gold
-- LONG_SILVER: 做多 Silver + 做空 Gold
+- SHORT_SILVER: 做空 SILVER + 做多 GOLD
+- LONG_SILVER: 做多 SILVER + 做空 GOLD
 
 ---
 
@@ -484,7 +484,7 @@ zscore = (spread - rolling_mean) / rolling_std
 获取实时 K 线数据。
 
 **输入**：
-- `symbol`: 交易对代码 (如 "xyz:SILVER")
+- `symbol`: 交易对代码 (如 "SILVER")
 - `interval`: K 线周期 ("15m")
 - `limit`: 获取数量
 
@@ -581,8 +581,8 @@ app.initialize(resume=False)
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `SYMBOL_SILVER` | str | `"xyz:SILVER"` | Silver 交易代码 |
-| `SYMBOL_GOLD` | str | `"xyz:GOLD"` | Gold 交易代码 |
+| `SYMBOL_SILVER` | str | `"SILVER"` | Silver 交易代码 |
+| `SYMBOL_GOLD` | str | `"GOLD"` | Gold 交易代码 |
 
 ### 6.2 K线周期
 
