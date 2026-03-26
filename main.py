@@ -103,7 +103,8 @@ class HyperHedge:
                 'entry_zscore': self.strategy.entry_zscore,
                 'entry_direction': self.strategy.entry_direction,
                 'iteration': self.iteration,
-                'last_close_iteration': self.strategy.last_close_iteration,  # 🐯 冷却期记录
+                'last_close_iteration': self.strategy.last_close_iteration,
+                '_last_reported_iteration': self._last_reported_iteration,  # 🐯 冷却期记录
                 'total_trades': self.total_trades,  # 累计开仓次数
                 'timestamp': datetime.now().isoformat()
             }
@@ -138,6 +139,7 @@ class HyperHedge:
                 logger.info(f"  - 入场方向: {state.get('entry_direction')}")
                 logger.info(f"  - 迭代次数: {state.get('iteration')}")
                 logger.info(f"  - 保存时间: {state.get('timestamp')}")
+                self._last_reported_iteration = state.get('_last_reported_iteration', 0)
                 return state
             except Exception as e:
                 logger.error(f"加载状态失败: {e}")
@@ -462,7 +464,7 @@ class HyperHedge:
         # 12. 每小时汇报一次状态给用户 (每60轮 = 60分钟)
         # 🐯 防重复: 用 _last_reported_iteration 确保每60轮只汇报一次
         if (self.iteration > 0 and self.iteration % 60 == 0
-                and self.iteration != self._last_reported_iteration):
+                and self.iteration > self._last_reported_iteration):
             pnl_info = self.trading_engine.get_pnl(prices)
             current_positions = self.trading_engine.get_positions()
             has_position = current_positions['silver'] != 0 or current_positions['gold'] != 0
