@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>HyperHedge 仪表盘</title>
+    <meta http-equiv="refresh" content="30">
+    <style>
+        body { background: #0f0f23; color: #e0e0e0; font-family: Arial; padding: 20px; margin: 0; }
+        h1 { text-align: center; color: #00d4ff; margin: 20px 0; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: #16213e; border-radius: 10px; padding: 20px; margin: 10px 0; }
+        .status { font-size: 24px; text-align: center; }
+        .green { color: #00ff88; }
+        .red { color: #ff4444; }
+        .yellow { color: #ffaa00; }
+        .blue { color: #00d4ff; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #00d4ff; width: 40%; }
+        .value { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐯 HyperHedge 配对交易仪表盘</h1>
+        
+        <div class="card">
+            <h2>📊 系统状态</h2>
+            <table>
+                <tr><th>状态</th><td class="value green">✅ 运行中</td></tr>
+                <tr><th>模式</th><td class="value blue">模拟盘</td></tr>
+                <tr><th>交易对</th><td class="value">xyz:SILVER / xyz:GOLD</td></tr>
+                <tr><th>周期</th><td class="value">15分钟</td></tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>💰 实时价格</h2>
+            <table>
+                <tr><th>xyz:SILVER</th><td class="value blue" id="price-silver">加载中...</td></tr>
+                <tr><th>xyz:GOLD</th><td class="value blue" id="price-gold">加载中...</td></tr>
+                <tr><th>更新于</th><td class="value" id="price-time">-</td></tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>📈 策略参数</h2>
+            <table>
+                <tr><th>Lookback</th><td class="value">24</td></tr>
+                <tr><th>入场 Short</th><td class="value">> 2.0</td></tr>
+                <tr><th>入场 Long</th><td class="value">< -2.5</td></tr>
+                <tr><th>出场阈值</th><td class="value">±0.1</td></tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>🎯 当前状态</h2>
+            <table>
+                <tr><th>Z-Score</th><td class="value" id="zscore">-</td></tr>
+                <tr><th>Spread</th><td class="value" id="spread">-</td></tr>
+                <tr><th>信号</th><td class="value" id="signal">-</td></tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>💼 持仓</h2>
+            <table>
+                <tr><th>Silver</th><td class="value" id="silver-pos">-</td></tr>
+                <tr><th>Gold</th><td class="value" id="gold-pos">-</td></tr>
+                <tr><th>平衡状态</th><td class="value" id="balance">-</td></tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>📜 最近日志</h2>
+            <pre id="logs" style="font-size: 12px; overflow-x: auto; max-height: 200px;">加载中...</pre>
+        </div>
+    </div>
+    
+    <script>
+        // 从日志获取实时价格
+        async function updatePrices() {
+            try {
+                const response = await fetch('/logs/hyperHedge_20260322.log');
+                const text = await response.text();
+                const lines = text.split('\n').filter(l => l.includes('实时价格 |'));
+                
+                if (lines.length > 0) {
+                    const latest = lines[lines.length - 1];
+                    // 解析: 实时价格 | xyz:SILVER: $67.8960 | xyz:GOLD: $4504.0000
+                    const silverMatch = latest.match(/xyz:SILVER:\s*\$?([\d.]+)/);
+                    const goldMatch = latest.match(/xyz:GOLD:\s*\$?([\d.]+)/);
+                    
+                    if (silverMatch) document.getElementById('price-silver').textContent = '$' + silverMatch[1];
+                    if (goldMatch) document.getElementById('price-gold').textContent = '$' + goldMatch[1];
+                }
+                
+                const now = new Date();
+                document.getElementById('price-time').textContent = now.toLocaleTimeString('zh-CN');
+                
+            } catch(e) {
+                console.error('价格获取失败:', e);
+            }
+        }
+        
+        async function updateStatus() {
+            try {
+                // 获取主日志
+                const response = await fetch('/logs/hyperHedge_20260322.log');
+                const text = await response.text();
+                const lines = text.split('\n').filter(l => l.includes('状态 |'));
+                
+                if (lines.length > 0) {
+                    const latest = lines[lines.length - 1];
+                    // 解析: 状态 | Z-score: -1.0352 | Spread: 0.015104 | 信号: HOLD
+                    const zMatch = latest.match(/Z-score:\s*([-\d.]+)/);
+                    const sMatch = latest.match(/Spread:\s*([-\d.]+)/);
+                    const sigMatch = latest.match(/信号:\s*(\S+)/);
+                    
+                    if (zMatch) document.getElementById('zscore').textContent = zMatch[1];
+                    if (sMatch) document.getElementById('spread').textContent = sMatch[1];
+                    if (sigMatch) document.getElementById('signal').textContent = sigMatch[1];
+                }
+                
+                // 获取风控日志(持仓)
+                const riskRes = await fetch('/logs/risk_20260322.log');
+                const riskText = await riskRes.text();
+                const riskLines = riskText.split('\n').filter(l => l.includes('POSITION_CHECK'));
+                
+                if (riskLines.length > 0) {
+                    const latestRisk = riskLines[riskLines.length - 1];
+                    // 解析: SILVER: 0.0000 | GOLD: 0.0000
+                    const silMatch = latestRisk.match(/SILVER:\s*([-\d.]+)/);
+                    const golMatch = latestRisk.match(/GOLD:\s*([-\d.]+)/);
+                    
+                    if (silMatch) document.getElementById('silver-pos').textContent = silMatch[1];
+                    if (golMatch) document.getElementById('gold-pos').textContent = golMatch[1];
+                    
+                    const isZero = silMatch && golMatch && silMatch[1] === '0.0000' && golMatch[1] === '0.0000';
+                    document.getElementById('balance').textContent = isZero ? '✅ 空仓' : '⚠️ 有持仓';
+                    document.getElementById('balance').className = isZero ? 'value green' : 'value yellow';
+                }
+                
+                // 显示最近日志
+                const logLines = text.split('\n').slice(-20).join('\n');
+                document.getElementById('logs').textContent = logLines;
+                
+            } catch(e) {
+                console.log(e);
+                document.getElementById('logs').textContent = '加载失败: ' + e;
+            }
+        }
+        
+        updateStatus();
+        updatePrices();
+        setInterval(updateStatus, 30000);
+        setInterval(updatePrices, 30000);
+    </script>
+</body>
+</html>
